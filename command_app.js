@@ -135,15 +135,20 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
          'er': 'entity-relationship-diagram',
          '클래스': 'class',
          'class': 'class',
-         '클라우드': 'cloud-architecture-diagram',
-         'cloud': 'cloud-architecture-diagram',
-         'ca': 'cloud-architecture-diagram'
+         '클라우드': null,
+         'cloud': null,
+         'ca': null
        };
        
-       if (typeMap[typeText]) {
-         diagramType = typeMap[typeText];
+       if (typeMap.hasOwnProperty(typeText)) {
+         const mappedType = typeMap[typeText];
+         if (mappedType) {
+           diagramType = mappedType;
+         } else {
+           diagramType = null;
+         }
          diagramText = parts[1].trim();
-         log(`다이어그램 유형 감지: ${diagramType}`);
+         log(`다이어그램 유형 감지: ${diagramType === null ? '(API 추론)' : diagramType}`);
        }
      }
      
@@ -165,13 +170,19 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
         // 입력을 그대로 사용 (전처리 없음)
         log(`Eraser API 요청: text: ${diagramText}, diagramType: ${diagramType}`);
         
+        const apiParams = {
+          text: diagramText,
+          theme: "light",
+          mode: "standard" // 표준 모드 사용
+        };
+
+        if (diagramType) { // diagramType이 null이 아닐 경우에만 추가
+          apiParams.diagramType = diagramType;
+        }
+        
         const response = await axios.post(
           'https://app.eraser.io/api/render/prompt',
-          {
-            text: diagramText,
-            diagramType: diagramType,
-            theme: "light"
-          },
+          apiParams,
           {
             headers: {
               'Authorization': `Bearer ${process.env.ERASER_API_KEY}`,
