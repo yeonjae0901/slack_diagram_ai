@@ -96,9 +96,9 @@ app.event('app_mention', async ({ event, say, ack, body }) => {
 });
 
 // 슬래시 명령어 처리 - /diagram
-app.command('/diagram', async ({ command, ack, respond }) => {
+app.command('/diagram', async ({ command, ack, respond, client }) => {
   try {
-    // 명령어 확인 (3초 내에 호출 필요)
+    // 명령어 즉시 확인 (3초 내에 호출 필요)
     await ack();
     log(`슬래시 명령어 수신: ${JSON.stringify(command)}`);
     
@@ -149,65 +149,80 @@ app.command('/diagram', async ({ command, ack, respond }) => {
       }
     }
 
-    // 작업 시작 메시지
-    await respond('다이어그램을 생성 중입니다...');
+    // 작업 시작 메시지 (즉시 응답)
+    const initialResponse = await respond({
+      response_type: 'in_channel',  // 채널에 명령어를 표시하도록 설정
+      text: `"${text}" 다이어그램을 생성 중입니다...`
+    });
     log(`다이어그램 생성 시작 - 유형: ${diagramType}, 내용: ${diagramText}`);
     
-    try {
-      // Eraser API로 다이어그램 생성
-      log(`Eraser API 요청: text: ${diagramText}, diagramType: ${diagramType}`);
-      const response = await axios.post(
-        'https://app.eraser.io/api/render/prompt',
-        {
-          text: diagramText,
-          diagramType: diagramType,
-          theme: "light",
-          mode: "standard"
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${process.env.ERASER_API_KEY}`,
-            'Content-Type': 'application/json',
+    // 비동기 작업 시작 (백그라운드에서 처리)
+    (async () => {
+      try {
+        // Eraser API로 다이어그램 생성
+        log(`Eraser API 요청: text: ${diagramText}, diagramType: ${diagramType}`);
+        const response = await axios.post(
+          'https://app.eraser.io/api/render/prompt',
+          {
+            text: diagramText,
+            diagramType: diagramType,
+            theme: "light",
+            mode: "standard"
           },
-        }
-      );
-
-      // 응답 로깅
-      log(`Eraser API 응답: ${JSON.stringify(response.data)}`);
-
-      // 생성된 다이어그램 이미지 URL
-      const imageUrl = response.data?.imageUrl || response.data?.url;
-      if (imageUrl) {
-        await respond({
-          text: '다이어그램이 생성되었습니다!',
-          blocks: [
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: "다이어그램이 생성되었습니다!"
-              }
+          {
+            headers: {
+              'Authorization': `Bearer ${process.env.ERASER_API_KEY}`,
+              'Content-Type': 'application/json',
             },
-            {
-              type: "image",
-              title: {
-                type: "plain_text",
-                text: "생성된 다이어그램"
+          }
+        );
+
+        // 응답 로깅
+        log(`Eraser API 응답: ${JSON.stringify(response.data)}`);
+
+        // 생성된 다이어그램 이미지 URL
+        const imageUrl = response.data?.imageUrl || response.data?.url;
+        if (imageUrl) {
+          // 웹훅으로 메시지 업데이트
+          await client.chat.postMessage({
+            channel: command.channel_id,
+            text: '다이어그램이 생성되었습니다!',
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `*명령어:* \`/diagram ${text}\`\n\n다이어그램이 생성되었습니다!`
+                }
               },
-              image_url: imageUrl,
-              alt_text: "생성된 다이어그램"
-            }
-          ]
+              {
+                type: "image",
+                title: {
+                  type: "plain_text",
+                  text: "생성된 다이어그램"
+                },
+                image_url: imageUrl,
+                alt_text: "생성된 다이어그램"
+              }
+            ]
+          });
+          log('다이어그램 생성 완료 - 이미지 URL: ' + imageUrl);
+        } else {
+          await client.chat.postMessage({
+            channel: command.channel_id,
+            text: '다이어그램 생성에는 성공했으나 이미지를 찾을 수 없습니다.'
+          });
+          log('다이어그램 생성 완료 - 이미지 URL 없음');
+        }
+      } catch (error) {
+        log(`Eraser API 에러: ${error.response?.data || error.message}`);
+        await client.chat.postMessage({
+          channel: command.channel_id,
+          text: '다이어그램 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
         });
-        log('다이어그램 생성 완료 - 이미지 URL: ' + imageUrl);
-      } else {
-        await respond('다이어그램 생성에는 성공했으나 이미지를 찾을 수 없습니다.');
-        log('다이어그램 생성 완료 - 이미지 URL 없음');
       }
-    } catch (error) {
-      log(`Eraser API 에러: ${error.response?.data || error.message}`);
-      await respond('다이어그램 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-    }
+    })();
+    
   } catch (error) {
     log(`슬래시 명령어 처리 에러: ${error.message}`);
     try {
