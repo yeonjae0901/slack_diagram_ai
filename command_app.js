@@ -117,22 +117,32 @@ app.command('/diagram', async ({ command, ack, respond }) => {
     let diagramText = text;
 
     // 다이어그램 유형 파싱 시도
-    const knownTypes = ['플로우차트', 'flowchart', '시퀀스', 'sequence', '마인드맵', 'mindmap', 'erd', '클래스다이어그램', 'class'];
+    const knownTypes = [
+      '플로우차트', 'flowchart', 'flow',
+      '시퀀스', 'sequence', 'seq',
+      '마인드맵', 'mindmap',
+      'erd', 'er',
+      '클래스다이어그램', 'class',
+      '클라우드', 'cloud', 'cad', 'ca'
+    ];
+    
     for (const type of knownTypes) {
       if (text.toLowerCase().startsWith(type + ':') || text.toLowerCase().startsWith(type + ' ')) {
         const separator = text.indexOf(':') > -1 ? ':' : ' ';
         diagramText = text.split(separator)[1].trim();
         
-        if (type === '플로우차트' || type === 'flowchart') {
+        if (type === '플로우차트' || type === 'flowchart' || type === 'flow') {
           diagramType = 'flowchart';
-        } else if (type === '시퀀스' || type === 'sequence') {
+        } else if (type === '시퀀스' || type === 'sequence' || type === 'seq') {
           diagramType = 'sequence';
         } else if (type === '마인드맵' || type === 'mindmap') {
           diagramType = 'mindmap';
-        } else if (type === 'erd') {
-          diagramType = 'er';
+        } else if (type === 'erd' || type === 'er') {
+          diagramType = 'entity-relationship-diagram';
         } else if (type === '클래스다이어그램' || type === 'class') {
           diagramType = 'class';
+        } else if (type === '클라우드' || type === 'cloud' || type === 'cad' || type === 'ca') {
+          diagramType = 'cloud-architecture-diagram';
         }
         
         break;
@@ -145,11 +155,14 @@ app.command('/diagram', async ({ command, ack, respond }) => {
     
     try {
       // Eraser API로 다이어그램 생성
+      log(`Eraser API 요청: text: ${diagramText}, diagramType: ${diagramType}`);
       const response = await axios.post(
         'https://app.eraser.io/api/render/prompt',
         {
-          content: diagramText,
-          type: diagramType,
+          text: diagramText,
+          diagramType: diagramType,
+          theme: "light",
+          mode: "standard"
         },
         {
           headers: {
@@ -158,6 +171,9 @@ app.command('/diagram', async ({ command, ack, respond }) => {
           },
         }
       );
+
+      // 응답 로깅
+      log(`Eraser API 응답: ${JSON.stringify(response.data)}`);
 
       // 생성된 다이어그램 이미지 URL
       const imageUrl = response.data?.imageUrl || response.data?.url;
