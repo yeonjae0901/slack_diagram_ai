@@ -150,7 +150,7 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
     }
 
     // 작업 시작 메시지 (즉시 응답)
-    const initialResponse = await respond({
+    await respond({
       response_type: 'in_channel',  // 채널에 명령어를 표시하도록 설정
       text: `"${text}" 다이어그램을 생성 중입니다...`
     });
@@ -184,9 +184,12 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
         const imageUrl = response.data?.imageUrl || response.data?.url;
         if (imageUrl) {
           try {
-            // 웹훅으로 메시지 업데이트
-            await client.chat.postMessage({
-              channel: command.channel_id,
+            // response_url을 사용하여 응답 (channels:join 권한 필요 없음)
+            log(`응답 URL로 메시지 전송 시도: ${command.response_url}`);
+            
+            await axios.post(command.response_url, {
+              response_type: 'in_channel',
+              replace_original: false,
               text: '다이어그램이 생성되었습니다!',
               blocks: [
                 {
@@ -207,87 +210,38 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
                 }
               ]
             });
+            
             log('다이어그램 생성 완료 - 이미지 URL: ' + imageUrl);
           } catch (postError) {
-            // 에러 상세 로깅
-            log(`포스팅 에러 발생: ${JSON.stringify(postError)}`);
+            // 응답 URL 오류 로깅
+            log(`응답 URL 전송 오류: ${postError.message}`);
             
-            // not_in_channel 오류 처리 (봇이 채널에 없는 경우)
-            if (postError.message && postError.message.includes('not_in_channel')) {
-              log('봇이 채널에 없음, 채널 참여 시도');
-              try {
-                // 채널에 참여 시도
-                await client.conversations.join({ channel: command.channel_id });
-                log('채널 참여 성공, 메시지 다시 전송 시도');
-                
-                // 메시지 다시 전송
-                await client.chat.postMessage({
-                  channel: command.channel_id,
-                  text: '다이어그램이 생성되었습니다!',
-                  blocks: [
-                    {
-                      type: "section",
-                      text: {
-                        type: "mrkdwn",
-                        text: `*명령어:* \`/diagram ${text}\`\n\n다이어그램이 생성되었습니다!`
-                      }
-                    },
-                    {
-                      type: "image",
-                      title: {
-                        type: "plain_text",
-                        text: "생성된 다이어그램"
-                      },
-                      image_url: imageUrl,
-                      alt_text: "생성된 다이어그램"
-                    }
-                  ]
-                });
-                log('채널 참여 후 다이어그램 전송 성공');
-              } catch (joinError) {
-                log(`채널 참여 실패: ${joinError.message}`);
-                try {
-                  // DM으로 전송 시도
-                  const dmResult = await client.chat.postMessage({
-                    channel: command.user_id,
-                    text: `채널에 봇을 초대해 주세요. 다이어그램은 다음 링크에서 확인할 수 있습니다: ${imageUrl}`
-                  });
-                  log(`DM 전송 결과: ${JSON.stringify(dmResult)}`);
-                } catch (dmError) {
-                  log(`DM 전송 실패: ${dmError.message}`);
-                }
-              }
-            } else {
-              log(`메시지 전송 오류: ${postError.message}`);
+            try {
               // DM으로 전송 시도
-              try {
-                const dmResult = await client.chat.postMessage({
-                  channel: command.user_id,
-                  text: `채널에 메시지를 전송하지 못했습니다. 다이어그램은 다음 링크에서 확인할 수 있습니다: ${imageUrl}`
-                });
-                log(`DM 전송 결과: ${JSON.stringify(dmResult)}`);
-              } catch (dmError) {
-                log(`DM 전송 실패: ${dmError.message}`);
-              }
+              const dmResult = await client.chat.postMessage({
+                channel: command.user_id,
+                text: `채널에 메시지를 전송하지 못했습니다. 다이어그램은 다음 링크에서 확인할 수 있습니다: ${imageUrl}`
+              });
+              log(`DM 전송 성공: ${dmResult.ts}`);
+            } catch (dmError) {
+              log(`DM 전송 실패: ${dmError.message}`);
             }
           }
         } else {
           try {
-            await client.chat.postMessage({
-              channel: command.channel_id,
+            await axios.post(command.response_url, {
+              response_type: 'in_channel',
+              replace_original: false,
               text: '다이어그램 생성에는 성공했으나 이미지를 찾을 수 없습니다.'
             });
           } catch (postError) {
-            // 에러 상세 로깅
-            log(`포스팅 에러 발생: ${JSON.stringify(postError)}`);
-            
-            // DM으로 전송 시도
+            log(`응답 URL 전송 오류: ${postError.message}`);
             try {
-              const dmResult = await client.chat.postMessage({
+              // DM으로 전송 시도
+              await client.chat.postMessage({
                 channel: command.user_id,
                 text: '다이어그램 생성에는 성공했으나 이미지를 찾을 수 없습니다.'
               });
-              log(`DM 전송 결과: ${JSON.stringify(dmResult)}`);
             } catch (dmError) {
               log(`DM 전송 실패: ${dmError.message}`);
             }
@@ -297,21 +251,19 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
       } catch (error) {
         log(`Eraser API 에러: ${error.response?.data || error.message}`);
         try {
-          await client.chat.postMessage({
-            channel: command.channel_id,
+          await axios.post(command.response_url, {
+            response_type: 'in_channel',
+            replace_original: false,
             text: '다이어그램 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
           });
         } catch (postError) {
-          // 에러 상세 로깅
-          log(`포스팅 에러 발생: ${JSON.stringify(postError)}`);
-          
-          // DM으로 전송 시도
+          log(`응답 URL 전송 오류: ${postError.message}`);
           try {
-            const dmResult = await client.chat.postMessage({
+            // DM으로 전송 시도
+            await client.chat.postMessage({
               channel: command.user_id,
               text: '다이어그램 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
             });
-            log(`DM 전송 결과: ${JSON.stringify(dmResult)}`);
           } catch (dmError) {
             log(`DM 전송 실패: ${dmError.message}`);
           }
