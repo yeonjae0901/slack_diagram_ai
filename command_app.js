@@ -116,38 +116,104 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
     let diagramType = 'flowchart'; // 기본값
     let diagramText = text;
 
-    // 간단한 콜론(:) 구분자를 이용한 유형 감지
-    if (text.includes(':')) {
-      const parts = text.split(':', 2);
-      const typeText = parts[0].toLowerCase().trim();
-      
-      // 주요 유형만 기본 매핑
-      const typeMap = {
-        '플로우차트': 'flowchart', 
-        'flowchart': 'flowchart',
-        'flow': 'flowchart',
-        '시퀀스': 'sequence', 
-        'sequence': 'sequence',
-        'seq': 'sequence',
-        '마인드맵': 'mindmap',
-        'mindmap': 'mindmap',
-        'erd': 'entity-relationship-diagram',
-        'er': 'entity-relationship-diagram',
-        '클래스': 'class',
-        'class': 'class',
-        '클라우드': 'cloud-architecture-diagram',
-        'cloud': 'cloud-architecture-diagram',
-        'ca': 'cloud-architecture-diagram'
-      };
-      
-      if (typeMap[typeText]) {
-        diagramType = typeMap[typeText];
-        diagramText = parts[1].trim();
-        log(`다이어그램 유형 감지: ${diagramType}`);
-      }
-    }
-    
-    log('입력 처리 완료');
+         // 콜론(:) 구분자를 이용한 유형 감지
+     if (text.includes(':')) {
+       const parts = text.split(':', 2);
+       const typeText = parts[0].toLowerCase().trim();
+       
+       // 주요 유형만 기본 매핑
+       const typeMap = {
+         '플로우차트': 'flowchart', 
+         'flowchart': 'flowchart',
+         'flow': 'flowchart',
+         '시퀀스': 'sequence', 
+         'sequence': 'sequence',
+         'seq': 'sequence',
+         '마인드맵': 'mindmap',
+         'mindmap': 'mindmap',
+         'erd': 'entity-relationship-diagram',
+         'er': 'entity-relationship-diagram',
+         '클래스': 'class',
+         'class': 'class',
+         '클라우드': 'cloud-architecture-diagram',
+         'cloud': 'cloud-architecture-diagram',
+         'ca': 'cloud-architecture-diagram'
+       };
+       
+       if (typeMap[typeText]) {
+         diagramType = typeMap[typeText];
+         diagramText = parts[1].trim();
+         log(`다이어그램 유형 감지: ${diagramType}`);
+         
+         // 클라우드 아키텍처 다이어그램인 경우 텍스트 구조화
+         if (diagramType === 'cloud-architecture-diagram') {
+           log('클라우드 다이어그램용 텍스트 구조화 시작');
+           
+           // 도구 목록 추출 (콤마나 쉼표로 구분된 항목 찾기)
+           const toolsMatch = diagramText.match(/(?:사용[하고\s]*있[는는\s]*)([^,.]+(?:,\s*[^,.]+)*)/);
+           const categoryMatch = diagramText.match(/(?:개발\s*[:：]\s*)([^,.]+)/);
+           const infoMatch = diagramText.match(/(?:정보수집\s*[:：]\s*)([^,.]+)/);
+           
+           let structuredText = '';
+           
+           // 도구 목록이 있으면 추가
+           if (toolsMatch && toolsMatch[1]) {
+             const tools = toolsMatch[1].split(/,|\s+/).filter(t => 
+               t.trim() && !['와', '과', '그리고', '및', '또는', '혹은', '을', '를', '이', '가'].includes(t.trim())
+             );
+             
+             if (tools.length > 0) {
+               structuredText += `서비스 목록:\n${tools.map(t => '- ' + t.trim()).join('\n')}\n\n`;
+             }
+           }
+           
+           // 카테고리 정보가 있으면 추가
+           if (categoryMatch || infoMatch) {
+             structuredText += "카테고리:\n";
+             
+             if (categoryMatch && categoryMatch[1]) {
+               structuredText += `- 개발: ${categoryMatch[1].trim()}\n`;
+             }
+             
+             if (infoMatch && infoMatch[1]) {
+               structuredText += `- 정보수집: ${infoMatch[1].trim()}\n`;
+             }
+             
+             // 노트 작성, 협업 등 다른 카테고리도 텍스트에서 추출 시도
+             const noteMatch = diagramText.match(/노트[북에\s]*([^,\.]+)/);
+             if (noteMatch && noteMatch[1]) {
+               structuredText += `- 노트작성: ${noteMatch[1].trim()}\n`;
+             }
+             
+             const collabMatch = diagramText.match(/협업[공간인\s]*([^,\.]+)/);
+             if (collabMatch && collabMatch[1]) {
+               structuredText += `- 협업: ${collabMatch[1].trim()}\n`;
+             }
+             
+             structuredText += '\n';
+           }
+           
+           // 흐름 정보 추출
+           const flowMatch = diagramText.match(/([^,\.]+(?:에서|으로)[^,\.]+(?:흐름|공유))/);
+           if (flowMatch && flowMatch[1]) {
+             structuredText += `흐름: ${flowMatch[1].trim()}\n`;
+           } else {
+             // 기본 흐름 추가
+             structuredText += "흐름: 정보수집 → 노트작성 → 협업\n";
+           }
+           
+           // 원본 텍스트가 충분히 짧으면 그대로 사용, 아니면 구조화된 텍스트 사용
+           if (diagramText.length < 100 && !structuredText.includes('서비스 목록') && !structuredText.includes('카테고리')) {
+             log('짧은 텍스트 감지, 원본 유지');
+           } else if (structuredText.trim()) {
+             log('구조화된 텍스트 생성 완료');
+             diagramText = structuredText;
+           }
+         }
+       }
+     }
+     
+     log('입력 처리 완료');
 
     // 작업 시작 메시지 (즉시 응답)
     await respond({
