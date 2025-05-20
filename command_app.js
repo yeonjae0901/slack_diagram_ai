@@ -114,45 +114,60 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
 
     // 간단한 다이어그램 유형 감지 (단일 패턴 기반)
     let diagramType = 'flowchart'; // 기본값
-    let diagramText = text;
-
-         // 콜론(:) 구분자를 이용한 간단한 유형 감지
-     if (text.includes(':')) {
-       const parts = text.split(':', 2);
-       const typeText = parts[0].toLowerCase().trim();
-       
-       // 주요 유형만 기본 매핑
-       const typeMap = {
-         '플로우차트': 'flowchart', 
-         'flowchart': 'flowchart',
-         'flow': 'flowchart',
-         '시퀀스': 'sequence', 
-         'sequence': 'sequence',
-         'seq': 'sequence',
-         '마인드맵': 'mindmap',
-         'mindmap': 'mindmap',
-         'erd': 'entity-relationship-diagram',
-         'er': 'entity-relationship-diagram',
-         '클래스': 'class',
-         'class': 'class',
-         '클라우드': 'cloud-architecture-diagram',
-         'cloud': 'cloud-architecture-diagram',
-         'ca': 'cloud-architecture-diagram'
-       };
-       
-       if (typeMap.hasOwnProperty(typeText)) {
-         diagramType = typeMap[typeText];
-         log(`parts[0] (유형으로 인식된 부분): '${parts[0]}', parts[1] (내용 부분 - trim 전): '${parts[1]}'`);
-         diagramText = parts[1].trim();
-         log(`diagramText (내용 부분 - trim 후): '${diagramText}'`);
-         log(`다이어그램 유형 감지: ${diagramType}`);
-       }
-     }
-     
-     // 줄바꿈 처리
-     diagramText = diagramText.replace(/\\n/g, '\n');
-     
-     log('입력 처리 완료');
+    let diagramText = text; // 기본적으로 전체 텍스트 사용
+    
+    // diagramType 추출 패턴 분석
+    const typePatterns = [
+      /^(플로우차트|flowchart|flow)\s*:\s*([\s\S]+)$/i,
+      /^(시퀀스|sequence|seq)\s*:\s*([\s\S]+)$/i,
+      /^(마인드맵|mindmap)\s*:\s*([\s\S]+)$/i,
+      /^(erd|er)\s*:\s*([\s\S]+)$/i,
+      /^(클래스|class)\s*:\s*([\s\S]+)$/i,
+      /^(클라우드|cloud|ca)\s*:\s*([\s\S]+)$/i
+    ];
+    
+    // 매칭되는 패턴 찾기
+    for (const pattern of typePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        // 매칭된 유형에 따라 diagramType 설정
+        const typeText = match[1].toLowerCase().trim();
+        
+        // 유형 매핑
+        const typeMap = {
+          '플로우차트': 'flowchart', 
+          'flowchart': 'flowchart',
+          'flow': 'flowchart',
+          '시퀀스': 'sequence', 
+          'sequence': 'sequence',
+          'seq': 'sequence',
+          '마인드맵': 'mindmap',
+          'mindmap': 'mindmap',
+          'erd': 'entity-relationship-diagram',
+          'er': 'entity-relationship-diagram',
+          '클래스': 'class',
+          'class': 'class',
+          '클라우드': 'cloud-architecture-diagram',
+          'cloud': 'cloud-architecture-diagram',
+          'ca': 'cloud-architecture-diagram'
+        };
+        
+        if (typeMap.hasOwnProperty(typeText)) {
+          diagramType = typeMap[typeText];
+          // 중요: 패턴의 두 번째 그룹(match[2])에 콜론 이후의 모든 텍스트가 포함됨
+          diagramText = match[2];
+          log(`다이어그램 유형 감지: ${diagramType}`);
+          log(`diagramText (패턴 매칭된 콘텐츠, 길이: ${diagramText.length}): ${diagramText}`);
+          break; // 첫 번째 매칭된 패턴에서 중단
+        }
+      }
+    }
+    
+    // 줄바꿈 처리
+    diagramText = diagramText.replace(/\\n/g, '\n');
+    
+    log(`최종 diagramText (API 전달 전, 길이: ${diagramText.length}): ${diagramText}`);
+    log('입력 처리 완료');
 
     // 작업 시작 메시지 (즉시 응답)
     await respond({
