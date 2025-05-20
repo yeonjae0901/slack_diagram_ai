@@ -1,28 +1,37 @@
 {
   "name": "slack_diagram_ai",
   "version": "1.0.0",
-  "description": "슬랙 다이어그램 생성봇",
+  "description": "슬랙에서 다이어그램을 생성하는 봇입니다. Eraser API를 사용하여 다양한 다이어그램(플로우차트, 시퀀스 다이어그램 등)을 생성할 수 있습니다.",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeonjae0901/slack_diagram_ai.git"
+  },
   "keywords": [
     "slack",
     "diagram",
     "eraser",
-    "bot"
+    "bot",
+    "flowchart"
   ],
   "author": "",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yeonjae0901/slack_diagram_ai/issues"
+  },
+  "homepage": "https://github.com/yeonjae0901/slack_diagram_ai#readme",
   "dependencies": {
-    "@slack/bolt": "^3.13.0",
+    "@slack/bolt": "^3.13.1",
     "axios": "^1.4.0",
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=14.0.0"
   }
 }

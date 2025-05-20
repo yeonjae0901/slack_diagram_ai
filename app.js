@@ -1,28 +1,29 @@
 require('dotenv').config();
-const { App } = require('@slack/bolt');
+const { App, ExpressReceiver } = require('@slack/bolt');
 const axios = require('axios');
 const express = require('express');
 
-// 익스프레스 앱 생성 및 슬랙 봇과 통합
-const expressApp = express();
-const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
+// ExpressReceiver 생성 (Bolt와 Express 통합)
+const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
-  socketMode: false,
-  appToken: process.env.SLACK_APP_TOKEN,
-  customRoutes: [
-    {
-      path: '/',
-      method: ['GET'],
-      handler: (req, res) => {
-        res.writeHead(200, {'Content-Type': 'text/plain'});
-        res.end('슬랙 다이어그램 봇 서버가 정상 동작 중입니다.');
-      },
-    },
-  ],
+  processBeforeResponse: true
 });
 
-// 슬랙에서 봇이 멘션되었을 때 응답
+// Express 앱에 접근
+const expressApp = receiver.app;
+
+// Slack 앱 설정
+const app = new App({
+  token: process.env.SLACK_BOT_TOKEN,
+  receiver
+});
+
+// Express에 기본 경로 응답 추가
+expressApp.get('/', (req, res) => {
+  res.status(200).send('슬랙 다이어그램 생성봇 서버가 동작 중입니다.');
+});
+
+// 슬랙 메시지 처리 - 멘션 시
 app.event('app_mention', async ({ event, say }) => {
   const text = event.text || '';
 
@@ -36,6 +37,9 @@ app.event('app_mention', async ({ event, say }) => {
     }
 
     try {
+      // 작업 시작 메시지
+      await say('다이어그램을 생성 중입니다...');
+      
       // Eraser API로 다이어그램 생성 (예시)
       const response = await axios.post(
         'https://api.eraser.io/v1/diagrams',
@@ -52,33 +56,49 @@ app.event('app_mention', async ({ event, say }) => {
       );
 
       // 생성된 다이어그램 이미지 URL (예시)
-      const imageUrl = response.data?.imageUrl;
+      const imageUrl = response.data?.imageUrl || response.data?.url;
       if (imageUrl) {
         await say({
           text: '다이어그램이 생성되었습니다!',
-          attachments: [
+          blocks: [
             {
-              image_url: imageUrl,
-              alt_text: '생성된 다이어그램',
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "다이어그램이 생성되었습니다!"
+              }
             },
-          ],
+            {
+              type: "image",
+              title: {
+                type: "plain_text",
+                text: "생성된 다이어그램"
+              },
+              image_url: imageUrl,
+              alt_text: "생성된 다이어그램"
+            }
+          ]
         });
       } else {
         await say('다이어그램 생성에는 성공했으나 이미지를 찾을 수 없습니다.');
       }
     } catch (error) {
-      console.error(error);
+      console.error('Eraser API 에러:', error.response?.data || error.message);
       await say('다이어그램 생성 중 오류가 발생했습니다.');
     }
     return;
   }
 
   // 기본 응답
-  await say(`안녕하세요! 다이어그램을 생성하려면 예시처럼 입력해 주세요.\n예: 플로우차트: 시작 -> 처리 -> 종료`);
+  await say(`안녕하세요! 다이어그램을 생성하려면 다음과 같이 입력해 주세요:\n> 플로우차트: 시작 -> 처리 -> 종료`);
 });
 
+// 서버 시작
+const PORT = process.env.PORT || 3000;
+
 (async () => {
-  await app.start(process.env.PORT || 3000);
-  console.log('⚡️ Slack 다이어그램 봇이 실행 중입니다!');
-  console.log(`서버 주소: http://localhost:${process.env.PORT || 3000}`);
+  // 앱 시작
+  await app.start(PORT);
+  console.log(`⚡️ 슬랙 다이어그램 봇이 포트 ${PORT}에서 실행 중입니다!`);
+  console.log(`⚡️ 슬랙 이벤트 URL: http://localhost:${PORT}/slack/events`);
 })(); 
