@@ -1,0 +1,28 @@
+{
+  "name": "slack_diagram_ai",
+  "version": "1.0.0",
+  "description": "슬랙 다이어그램 생성봇",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "slack",
+    "diagram",
+    "eraser",
+    "bot"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@slack/bolt": "^3.13.0",
+    "axios": "^1.4.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
