@@ -167,10 +167,7 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
         
         const apiParams = {
           text: diagramText,
-          theme: "light",
-          styleMode: "plain",
-          colorMode: "pastel",
-          typeface: "clean"
+          theme: "light"
         };
 
         if (diagramType) {
