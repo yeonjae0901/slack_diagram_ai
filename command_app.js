@@ -163,6 +163,7 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
     (async () => {
       try {
         // 입력을 그대로 사용 (전처리 없음)
+        log(`최종 API 전달 직전 diagramText: ${diagramText}`); // 최종 전달될 텍스트 로깅
         log(`Eraser API 요청: text: ${diagramText}, diagramType: ${diagramType}`);
         
         const apiParams = {
