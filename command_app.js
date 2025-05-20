@@ -209,12 +209,17 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
             });
             log('다이어그램 생성 완료 - 이미지 URL: ' + imageUrl);
           } catch (postError) {
+            // 에러 상세 로깅
+            log(`포스팅 에러 발생: ${JSON.stringify(postError)}`);
+            
             // not_in_channel 오류 처리 (봇이 채널에 없는 경우)
-            if (postError.data?.error === 'not_in_channel') {
+            if (postError.message && postError.message.includes('not_in_channel')) {
               log('봇이 채널에 없음, 채널 참여 시도');
               try {
                 // 채널에 참여 시도
                 await client.conversations.join({ channel: command.channel_id });
+                log('채널 참여 성공, 메시지 다시 전송 시도');
+                
                 // 메시지 다시 전송
                 await client.chat.postMessage({
                   channel: command.channel_id,
@@ -241,19 +246,29 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
                 log('채널 참여 후 다이어그램 전송 성공');
               } catch (joinError) {
                 log(`채널 참여 실패: ${joinError.message}`);
-                // DM으로 전송 시도
-                await client.chat.postMessage({
-                  channel: command.user_id,
-                  text: `채널에 봇을 초대해 주세요. 생성된 다이어그램: ${imageUrl}`
-                });
+                try {
+                  // DM으로 전송 시도
+                  const dmResult = await client.chat.postMessage({
+                    channel: command.user_id,
+                    text: `채널에 봇을 초대해 주세요. 다이어그램은 다음 링크에서 확인할 수 있습니다: ${imageUrl}`
+                  });
+                  log(`DM 전송 결과: ${JSON.stringify(dmResult)}`);
+                } catch (dmError) {
+                  log(`DM 전송 실패: ${dmError.message}`);
+                }
               }
             } else {
               log(`메시지 전송 오류: ${postError.message}`);
               // DM으로 전송 시도
-              await client.chat.postMessage({
-                channel: command.user_id,
-                text: `채널에 메시지를 전송하지 못했습니다. 생성된 다이어그램: ${imageUrl}`
-              });
+              try {
+                const dmResult = await client.chat.postMessage({
+                  channel: command.user_id,
+                  text: `채널에 메시지를 전송하지 못했습니다. 다이어그램은 다음 링크에서 확인할 수 있습니다: ${imageUrl}`
+                });
+                log(`DM 전송 결과: ${JSON.stringify(dmResult)}`);
+              } catch (dmError) {
+                log(`DM 전송 실패: ${dmError.message}`);
+              }
             }
           }
         } else {
@@ -263,11 +278,19 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
               text: '다이어그램 생성에는 성공했으나 이미지를 찾을 수 없습니다.'
             });
           } catch (postError) {
+            // 에러 상세 로깅
+            log(`포스팅 에러 발생: ${JSON.stringify(postError)}`);
+            
             // DM으로 전송 시도
-            await client.chat.postMessage({
-              channel: command.user_id,
-              text: '다이어그램 생성에는 성공했으나 이미지를 찾을 수 없습니다.'
-            });
+            try {
+              const dmResult = await client.chat.postMessage({
+                channel: command.user_id,
+                text: '다이어그램 생성에는 성공했으나 이미지를 찾을 수 없습니다.'
+              });
+              log(`DM 전송 결과: ${JSON.stringify(dmResult)}`);
+            } catch (dmError) {
+              log(`DM 전송 실패: ${dmError.message}`);
+            }
           }
           log('다이어그램 생성 완료 - 이미지 URL 없음');
         }
@@ -279,11 +302,19 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
             text: '다이어그램 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
           });
         } catch (postError) {
+          // 에러 상세 로깅
+          log(`포스팅 에러 발생: ${JSON.stringify(postError)}`);
+          
           // DM으로 전송 시도
-          await client.chat.postMessage({
-            channel: command.user_id,
-            text: '다이어그램 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
-          });
+          try {
+            const dmResult = await client.chat.postMessage({
+              channel: command.user_id,
+              text: '다이어그램 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+            });
+            log(`DM 전송 결과: ${JSON.stringify(dmResult)}`);
+          } catch (dmError) {
+            log(`DM 전송 실패: ${dmError.message}`);
+          }
         }
       }
     })();
