@@ -167,16 +167,14 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
         
         const apiParams = {
           text: diagramText,
-          theme: "light"
+          theme: "light",
+          styleMode: "plain",
+          colorMode: "pastel",
+          typeface: "clean"
         };
 
         if (diagramType) {
           apiParams.diagramType = diagramType;
-        }
-
-        // 클라우드 아키텍처 다이어그램이 아닌 경우에만 standard 모드 적용
-        if (diagramType !== 'cloud-architecture-diagram') {
-          apiParams.mode = "standard"; 
         }
         
         const response = await axios.post(
