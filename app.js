@@ -98,7 +98,10 @@ const PORT = process.env.PORT || 3000;
 
 (async () => {
   // 앱 시작
-  await app.start(PORT);
+  await app.start({
+    port: PORT,
+    host: '0.0.0.0'
+  });
   console.log(`⚡️ 슬랙 다이어그램 봇이 포트 ${PORT}에서 실행 중입니다!`);
   console.log(`⚡️ 슬랙 이벤트 URL: http://localhost:${PORT}/slack/events`);
 })(); 
