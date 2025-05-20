@@ -135,20 +135,15 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
          'er': 'entity-relationship-diagram',
          '클래스': 'class',
          'class': 'class',
-         '클라우드': null,
-         'cloud': null,
-         'ca': null
+         '클라우드': 'cloud-architecture-diagram',
+         'cloud': 'cloud-architecture-diagram',
+         'ca': 'cloud-architecture-diagram'
        };
        
        if (typeMap.hasOwnProperty(typeText)) {
-         const mappedType = typeMap[typeText];
-         if (mappedType) {
-           diagramType = mappedType;
-         } else {
-           diagramType = null;
-         }
+         diagramType = typeMap[typeText];
          diagramText = parts[1].trim();
-         log(`다이어그램 유형 감지: ${diagramType === null ? '(API 추론)' : diagramType}`);
+         log(`다이어그램 유형 감지: ${diagramType}`);
        }
      }
      
