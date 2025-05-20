@@ -170,8 +170,7 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
           {
             text: diagramText,
             diagramType: diagramType,
-            theme: "light",
-            mode: "standard"
+            theme: "light"
           },
           {
             headers: {
