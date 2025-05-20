@@ -174,26 +174,8 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
     // 비동기 작업 시작 (백그라운드에서 처리)
     (async () => {
       try {
-        // 텍스트 전처리: 줄바꿈 보존하며 포맷팅
-        let formattedText = diagramText
-          .replace(/\\n/g, '\n')
-          .replace(/→/g, '->') // 화살표 기호 표준화
-          .replace(/(\d+\.\s)/g, '\n$1') // 번호 앞에 줄바꿈 추가
-          .replace(/(\-\s)/g, '\n$1'); // 글머리 기호 앞에 줄바꿈 추가
-          
-        // 클라우드 아키텍처 다이어그램의 경우 "도구:" 단어 대체
-        if (diagramType === 'cloud-architecture-diagram') {
-          formattedText = formattedText.replace(/도구:/g, '애플리케이션:');
-        }
-        
-        // 다이어그램 유형에 맞게 힌트 추가
-        let enhancedText = formattedText;
-        if (diagramType === 'cloud-architecture-diagram') {
-          // 클라우드 아키텍처 다이어그램에 대한 힌트 추가
-          if (!enhancedText.toLowerCase().includes('group') && enhancedText.includes('카테고리:')) {
-            enhancedText = enhancedText + '\n\n카테고리를 그룹으로 표시하고 각 애플리케이션을 해당 그룹에 배치해주세요. 각 애플리케이션은 실제 서비스 이름(옵시디언, 노션, 슬랙 등)을 사용하고 일반적인 도구 아이콘이 아닌 실제 앱/서비스로 표현해주세요. 웹사이트 스타일로 깔끔하게 만들어주세요.';
-          }
-        }
+        // 줄바꿈만 처리하고 최소한의 전처리
+        const enhancedText = diagramText.replace(/\\n/g, '\n');
         
         log(`Eraser API 요청: text: ${enhancedText}, diagramType: ${diagramType}`);
         
@@ -202,11 +184,7 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
           {
             text: enhancedText,
             diagramType: diagramType,
-            theme: "light",
-            mode: "standard",  // 공식 문서에 따른 standard 모드 사용
-            styleMode: "plain",  // 그림자 없는 깔끔한 스타일
-            colorMode: "pastel",  // 부드러운 색상
-            typeface: "clean"  // 깔끔한 서체
+            theme: "light"
           },
           {
             headers: {
