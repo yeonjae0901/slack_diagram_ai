@@ -142,7 +142,9 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
        
        if (typeMap.hasOwnProperty(typeText)) {
          diagramType = typeMap[typeText];
+         log(`parts[0] (유형으로 인식된 부분): '${parts[0]}', parts[1] (내용 부분 - trim 전): '${parts[1]}'`);
          diagramText = parts[1].trim();
+         log(`diagramText (내용 부분 - trim 후): '${diagramText}'`);
          log(`다이어그램 유형 감지: ${diagramType}`);
        }
      }
