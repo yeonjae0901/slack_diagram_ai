@@ -186,7 +186,7 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
         if (diagramType === 'cloud-architecture-diagram') {
           // 클라우드 아키텍처 다이어그램에 대한 힌트 추가
           if (!enhancedText.toLowerCase().includes('group') && enhancedText.includes('카테고리:')) {
-            enhancedText = enhancedText + '\n\n카테고리를 그룹으로 표시하고 각 도구를 해당 그룹에 배치해주세요.';
+            enhancedText = enhancedText + '\n\n카테고리를 그룹으로 표시하고 각 도구를 해당 그룹에 배치해주세요. 웹사이트 스타일로 깔끔하게 만들어주세요.';
           }
         }
         
@@ -198,7 +198,10 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
             text: enhancedText,
             diagramType: diagramType,
             theme: "light",
-            mode: "standard"
+            mode: "standard",  // 공식 문서에 따른 standard 모드 사용
+            styleMode: "plain",  // 그림자 없는 깔끔한 스타일
+            colorMode: "pastel",  // 부드러운 색상
+            typeface: "clean"  // 깔끔한 서체
           },
           {
             headers: {
