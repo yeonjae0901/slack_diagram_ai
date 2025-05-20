@@ -126,8 +126,11 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
       '클라우드', 'cloud', 'cad', 'ca'
     ];
     
+    // 유형 확인 및 텍스트 추출
+    let foundType = false;
     for (const type of knownTypes) {
-      if (text.toLowerCase().startsWith(type + ':') || text.toLowerCase().startsWith(type + ' ')) {
+      if (text.toLowerCase().trim().startsWith(type + ':') || text.toLowerCase().trim().startsWith(type + ' ')) {
+        foundType = true;
         const separator = text.indexOf(':') > -1 ? ':' : ' ';
         diagramText = text.split(separator)[1].trim();
         
@@ -148,6 +151,18 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
         break;
       }
     }
+    
+    // 구조화된 입력 감지 (도구:, 카테고리:, 흐름: 등의 키워드 포함)
+    if (diagramText.includes('도구:') || diagramText.includes('카테고리:') || diagramText.includes('흐름:')) {
+      // 이미 구조화된 입력으로 간주하고 그대로 사용
+      log('구조화된 입력 감지: 형식을 유지합니다');
+    } 
+    // 일반 텍스트에 대한 도움 추가
+    else if (diagramType === 'cloud-architecture-diagram' && !foundType) {
+      // 클라우드 다이어그램 형식이 감지되지 않았을 경우 더 명확한 형식으로 변환
+      diagramText = `도구: ${text}\n흐름: 정보수집 → 저장 → 처리 → 협업`;
+      log('구조화되지 않은 입력: 기본 형식 적용');
+    }
 
     // 작업 시작 메시지 (즉시 응답)
     await respond({
@@ -159,12 +174,28 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
     // 비동기 작업 시작 (백그라운드에서 처리)
     (async () => {
       try {
-        // Eraser API로 다이어그램 생성
-        log(`Eraser API 요청: text: ${diagramText}, diagramType: ${diagramType}`);
+        // 텍스트 전처리: 줄바꿈 보존하며 포맷팅
+        const formattedText = diagramText
+          .replace(/\\n/g, '\n')
+          .replace(/→/g, '->') // 화살표 기호 표준화
+          .replace(/(\d+\.\s)/g, '\n$1') // 번호 앞에 줄바꿈 추가
+          .replace(/(\-\s)/g, '\n$1'); // 글머리 기호 앞에 줄바꿈 추가
+        
+        // 다이어그램 유형에 맞게 힌트 추가
+        let enhancedText = formattedText;
+        if (diagramType === 'cloud-architecture-diagram') {
+          // 클라우드 아키텍처 다이어그램에 대한 힌트 추가
+          if (!enhancedText.toLowerCase().includes('group') && enhancedText.includes('카테고리:')) {
+            enhancedText = enhancedText + '\n\n카테고리를 그룹으로 표시하고 각 도구를 해당 그룹에 배치해주세요.';
+          }
+        }
+        
+        log(`Eraser API 요청: text: ${enhancedText}, diagramType: ${diagramType}`);
+        
         const response = await axios.post(
           'https://app.eraser.io/api/render/prompt',
           {
-            text: diagramText,
+            text: enhancedText,
             diagramType: diagramType,
             theme: "light",
             mode: "standard"
