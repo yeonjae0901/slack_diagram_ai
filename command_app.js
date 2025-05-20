@@ -152,17 +152,8 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
       }
     }
     
-    // 구조화된 입력 감지 (도구:, 카테고리:, 흐름: 등의 키워드 포함)
-    if (diagramText.includes('도구:') || diagramText.includes('카테고리:') || diagramText.includes('흐름:')) {
-      // 이미 구조화된 입력으로 간주하고 그대로 사용
-      log('구조화된 입력 감지: 형식을 유지합니다');
-    } 
-    // 일반 텍스트에 대한 도움 추가
-    else if (diagramType === 'cloud-architecture-diagram' && !foundType) {
-      // 클라우드 다이어그램 형식이 감지되지 않았을 경우 더 명확한 형식으로 변환
-      diagramText = `도구: ${text}\n흐름: 정보수집 → 저장 → 처리 → 협업`;
-      log('구조화되지 않은 입력: 기본 형식 적용');
-    }
+    // 어떠한 입력도 그대로 사용 (추가 구조화 없음)
+    log('입력 텍스트 원본 그대로 사용');
 
     // 작업 시작 메시지 (즉시 응답)
     await respond({
