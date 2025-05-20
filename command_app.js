@@ -112,48 +112,42 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
       return;
     }
 
-    // 다이어그램 유형 감지
+    // 간단한 다이어그램 유형 감지 (단일 패턴 기반)
     let diagramType = 'flowchart'; // 기본값
     let diagramText = text;
 
-    // 다이어그램 유형 파싱 시도
-    const knownTypes = [
-      '플로우차트', 'flowchart', 'flow',
-      '시퀀스', 'sequence', 'seq',
-      '마인드맵', 'mindmap',
-      'erd', 'er',
-      '클래스다이어그램', 'class',
-      '클라우드', 'cloud', 'cad', 'ca'
-    ];
-    
-    // 유형 확인 및 텍스트 추출
-    let foundType = false;
-    for (const type of knownTypes) {
-      if (text.toLowerCase().trim().startsWith(type + ':') || text.toLowerCase().trim().startsWith(type + ' ')) {
-        foundType = true;
-        const separator = text.indexOf(':') > -1 ? ':' : ' ';
-        diagramText = text.split(separator)[1].trim();
-        
-        if (type === '플로우차트' || type === 'flowchart' || type === 'flow') {
-          diagramType = 'flowchart';
-        } else if (type === '시퀀스' || type === 'sequence' || type === 'seq') {
-          diagramType = 'sequence';
-        } else if (type === '마인드맵' || type === 'mindmap') {
-          diagramType = 'mindmap';
-        } else if (type === 'erd' || type === 'er') {
-          diagramType = 'entity-relationship-diagram';
-        } else if (type === '클래스다이어그램' || type === 'class') {
-          diagramType = 'class';
-        } else if (type === '클라우드' || type === 'cloud' || type === 'cad' || type === 'ca') {
-          diagramType = 'cloud-architecture-diagram';
-        }
-        
-        break;
+    // 간단한 콜론(:) 구분자를 이용한 유형 감지
+    if (text.includes(':')) {
+      const parts = text.split(':', 2);
+      const typeText = parts[0].toLowerCase().trim();
+      
+      // 주요 유형만 기본 매핑
+      const typeMap = {
+        '플로우차트': 'flowchart', 
+        'flowchart': 'flowchart',
+        'flow': 'flowchart',
+        '시퀀스': 'sequence', 
+        'sequence': 'sequence',
+        'seq': 'sequence',
+        '마인드맵': 'mindmap',
+        'mindmap': 'mindmap',
+        'erd': 'entity-relationship-diagram',
+        'er': 'entity-relationship-diagram',
+        '클래스': 'class',
+        'class': 'class',
+        '클라우드': 'cloud-architecture-diagram',
+        'cloud': 'cloud-architecture-diagram',
+        'ca': 'cloud-architecture-diagram'
+      };
+      
+      if (typeMap[typeText]) {
+        diagramType = typeMap[typeText];
+        diagramText = parts[1].trim();
+        log(`다이어그램 유형 감지: ${diagramType}`);
       }
     }
     
-    // 어떠한 입력도 그대로 사용 (추가 구조화 없음)
-    log('입력 텍스트 원본 그대로 사용');
+    log('입력 처리 완료');
 
     // 작업 시작 메시지 (즉시 응답)
     await respond({
@@ -165,15 +159,13 @@ app.command('/diagram', async ({ command, ack, respond, client }) => {
     // 비동기 작업 시작 (백그라운드에서 처리)
     (async () => {
       try {
-        // 줄바꿈만 처리하고 최소한의 전처리
-        const enhancedText = diagramText.replace(/\\n/g, '\n');
-        
-        log(`Eraser API 요청: text: ${enhancedText}, diagramType: ${diagramType}`);
+        // 입력을 그대로 사용 (전처리 없음)
+        log(`Eraser API 요청: text: ${diagramText}, diagramType: ${diagramType}`);
         
         const response = await axios.post(
           'https://app.eraser.io/api/render/prompt',
           {
-            text: enhancedText,
+            text: diagramText,
             diagramType: diagramType,
             theme: "light"
           },
